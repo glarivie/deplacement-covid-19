@@ -1,12 +1,27 @@
-import React, { InputHTMLAttributes } from 'react';
+import React, { InputHTMLAttributes, useCallback, ChangeEvent } from 'react';
+import { get } from 'lodash';
+
+import useCachedState from 'hooks/useCachedState';
+import { FormState } from 'types';
+
+type FormKey = keyof Omit<FormState, 'reasons'>;
 
 interface IProps extends InputHTMLAttributes<HTMLInputElement> {
-  readonly name: string;
+  readonly name: FormKey;
   readonly label: string;
 }
 
 const FormGroup = (props: IProps) => {
   const { name, label, type = 'text', ...rest } = props;
+
+  const [cachedState, setCachedState] = useCachedState();
+  const value = get<FormState, FormKey, string>(cachedState, name, '');
+
+  const setInputValue = useCallback(({ currentTarget }: ChangeEvent<HTMLInputElement>) => {
+    const value = get(currentTarget, 'value', '');
+
+    return setCachedState({ [name]: value });
+  }, [setCachedState, name]);
 
   return (
     <div className="form-group">
@@ -17,6 +32,8 @@ const FormGroup = (props: IProps) => {
           className="form-control"
           id={name}
           {...rest}
+          value={value}
+          onChange={setInputValue}
           required
         />
         {/* <span className="validity" aria-hidden="true" hidden></span> */}

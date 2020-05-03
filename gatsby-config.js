@@ -31,6 +31,7 @@ module.exports = {
         alias: {
           assets: resolve(__dirname, 'src', 'assets'),
           types: resolve(__dirname, 'src', 'types'),
+          hooks: resolve(__dirname, 'src', 'hooks'),
           pages: resolve(__dirname, 'src', 'pages'),
           components: resolve(__dirname, 'src', 'components'),
           helpers: resolve(__dirname, 'src', 'helpers'),

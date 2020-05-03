@@ -19,6 +19,7 @@
       "assets/*": ["./assets/*"],
       "components/*": ["./components/*"],
       "helpers/*": ["./helpers/*"],
+      "hooks/*": ["./hooks/*"],
       "pages/*": ["./pages/*"],
       "styles/*": ["./styles/*"]
     }

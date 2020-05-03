@@ -1,6 +1,5 @@
-import React, { Fragment, useCallback } from 'react';
-import { useList, useLocalStorage } from 'react-use';
-import { uniq } from 'lodash';
+import React, { Fragment } from 'react';
+import { useMount } from 'react-use';
 
 import Header from 'components/Header';
 import FormGroup from 'components/FormGroup';
@@ -8,18 +7,26 @@ import Reasons from 'components/Reasons';
 import Credits from 'components/Credits';
 import Footer from 'components/Footer';
 
-import { Reason } from 'types';
+import useCachedState from 'hooks/useCachedState';
+import { pad, getFormattedDate } from 'helpers/certificate';
 
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'styles/shared/main.scss';
 
 const Homepage = () => {
-  const [reasons, { push, filter }] = useList<Reason>([]);
+  const [, setCachedState] = useCachedState();
 
-  const setActiveReasons = useCallback((value: Reason): void => {
-    return reasons.includes(value) ? filter(r => r !== value) : push(value);
-  }, [reasons, push, filter]);
+  useMount(() => {
+    const loadedDate = new Date();
+    const hour = pad(loadedDate.getHours());
+    const minute = pad(loadedDate.getMinutes());
+
+    return setCachedState({
+      date: getFormattedDate(loadedDate),
+      time: `${hour}:${minute}`,
+    });
+  });
 
   return (
     <Fragment>
@@ -60,7 +67,7 @@ const Homepage = () => {
 
             <FormGroup
               label="Lieu de naissance"
-              name="lieunaissance"
+              name="birthplace"
               autoComplete="off"
               placeholder="Lyon"
             />
@@ -92,15 +99,12 @@ const Homepage = () => {
               placeholder="75001"
             />
 
-            <Reasons
-              reasons={reasons}
-              setActiveReasons={setActiveReasons}
-            />
+            <Reasons />
 
             <FormGroup
               label="Date de sortie"
               type="date"
-              name="datesortie"
+              name="date"
               autoComplete="off"
               placeholder="JJ/MM/YYYY"
             />
@@ -108,7 +112,7 @@ const Homepage = () => {
             <FormGroup
               label="Heure de sortie"
               type="time"
-              name="heure"
+              name="time"
               autoComplete="off"
             />
 

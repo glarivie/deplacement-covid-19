@@ -1,123 +1,115 @@
-import 'bootstrap/dist/css/bootstrap.min.css'
+import { PDFDocument, StandardFonts, PDFFont } from 'pdf-lib';
+import QRCode, { QRCodeToDataURLOptions } from 'qrcode';
+import { isNil } from 'lodash';
 
-import './main.css'
+import { FormState, Reason } from 'types';
+import pdfBase from 'assets/certificate.pdf';
 
-import { PDFDocument, StandardFonts } from 'pdf-lib'
-import QRCode from 'qrcode'
+const getCachedState = (): FormState => {
+  const data = localStorage.getItem('cached');
 
-import './check-updates'
-import './icons'
-import { $, $$ } from './dom-utils'
-import pdfBase from './certificate.pdf'
+  return isNil(data) ? {} : JSON.parse(data);
+};
 
-const generateQR = async (text) => {
+const generateQR = async (text: string): Promise<string | void> => {
   try {
-    const opts = {
+    const opts: QRCodeToDataURLOptions = {
       errorCorrectionLevel: 'M',
       type: 'image/png',
-      quality: 0.92,
+      rendererOpts: {
+        quality: 0.92,
+      },
       margin: 1,
-    }
-    return await QRCode.toDataURL(text, opts)
+    };
+
+    return QRCode.toDataURL(text, opts);
   } catch (err) {
-    console.error(err)
+    console.error(err);
   }
+};
+
+const pad = (str: any): string => {
+  return String(str).padStart(2, '0');
+};
+
+const getFormattedDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1); // Les mois commencent à 0
+  const day = pad(date.getDate());
+  return `${year}-${month}-${day}`;
+};
+
+const getProfile = (): FormState => {
+  const fields = getCachedState();
+  const date = fields?.date?.split('-').reverse().join('/');
+
+  return { ...fields, date };
 }
 
-function pad (str) {
-  return String(str).padStart(2, '0')
-}
-
-function getFormattedDate (date) {
-  const year = date.getFullYear()
-  const month = pad(date.getMonth() + 1) // Les mois commencent à 0
-  const day = pad(date.getDate())
-  return `${year}-${month}-${day}`
-}
-
-document.addEventListener('DOMContentLoaded', setReleaseDateTime)
-
-function setReleaseDateTime () {
-  const releaseDateInput = $('#field-datesortie')
-  const loadedDate = new Date()
-  releaseDateInput.value = getFormattedDate(loadedDate)
-
-  const hour = pad(loadedDate.getHours())
-  const minute = pad(loadedDate.getMinutes())
-
-  const releaseTimeInput = $('#field-heuresortie')
-  releaseTimeInput.value = `${hour}:${minute}`
-}
-
-function getProfile () {
-  const fields = {}
-  for (const field of $$('#form-profile input')) {
-    if (field.id === 'field-datesortie') {
-      const dateSortie = field.value.split('-')
-      fields[field.id.substring('field-'.length)] = `${dateSortie[2]}/${dateSortie[1]}/${dateSortie[0]}`
-    } else {
-      fields[field.id.substring('field-'.length)] = field.value
-    }
-  }
-  return fields
-}
-
-function idealFontSize (font, text, maxWidth, minSize, defaultSize) {
-  let currentSize = defaultSize
-  let textWidth = font.widthOfTextAtSize(text, defaultSize)
+const idealFontSize = (font: PDFFont, text: string, maxWidth: number, minSize: number, defaultSize: number) => {
+  let currentSize = defaultSize;
+  let textWidth = font.widthOfTextAtSize(text, defaultSize);
 
   while (textWidth > maxWidth && currentSize > minSize) {
-    textWidth = font.widthOfTextAtSize(text, --currentSize)
+    textWidth = font.widthOfTextAtSize(text, --currentSize);
   }
 
-  return textWidth > maxWidth ? null : currentSize
-}
+  return textWidth > maxWidth ? null : currentSize;
+};
 
-async function generatePdf (profile, reasons) {
-  const creationInstant = new Date()
-  const creationDate = creationInstant.toLocaleDateString('fr-FR')
+const generatePdf = async (profile: FormState, reasons: Reason[]) => {
+  const creationInstant = new Date();
+  const creationDate = creationInstant.toLocaleDateString('fr-FR');
   const creationHour = creationInstant
     .toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-    .replace(':', 'h')
+    .replace(':', 'h');
 
   const {
     lastname,
     firstname,
     birthday,
-    lieunaissance,
+    birthplace,
     address,
     zipcode,
     town,
-    datesortie,
-    heuresortie,
-  } = profile
-  const releaseHours = String(heuresortie).substring(0, 2)
-  const releaseMinutes = String(heuresortie).substring(3, 5)
+    date,
+    time,
+  } = profile;
+  const releaseHours = String(time).substring(0, 2);
+  const releaseMinutes = String(time).substring(3, 5);
 
   const data = [
     `Cree le: ${creationDate} a ${creationHour}`,
     `Nom: ${lastname}`,
     `Prenom: ${firstname}`,
-    `Naissance: ${birthday} a ${lieunaissance}`,
+    `Naissance: ${birthday} a ${birthplace}`,
     `Adresse: ${address} ${zipcode} ${town}`,
-    `Sortie: ${datesortie} a ${releaseHours}h${releaseMinutes}`,
+    `Sortie: ${date} a ${releaseHours}h${releaseMinutes}`,
     `Motifs: ${reasons}`,
-  ].join('; ')
+  ].join('; ');
 
-  const existingPdfBytes = await fetch(pdfBase).then((res) => res.arrayBuffer())
+  const existingPdfBytes = await fetch(pdfBase).then((res) => res.arrayBuffer());
 
-  const pdfDoc = await PDFDocument.load(existingPdfBytes)
-  const page1 = pdfDoc.getPages()[0]
+  const pdfDoc = await PDFDocument.load(existingPdfBytes);
+  const page1 = pdfDoc.getPages()[0];
 
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
-  const drawText = (text, x, y, size = 11) => {
-    page1.drawText(text, { x, y, size, font })
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  const drawText = (text: string, x: number, y: number, size = 11) => {
+    page1.drawText(text, { x, y, size, font });
+  };
+
+  drawText(`${firstname} ${lastname}`, 123, 686);
+
+  if (birthday) {
+    drawText(birthday, 123, 661);
   }
 
-  drawText(`${firstname} ${lastname}`, 123, 686)
-  drawText(birthday, 123, 661)
-  drawText(lieunaissance, 92, 638)
-  drawText(`${address} ${zipcode} ${town}`, 134, 613)
+  if (birthplace) {
+    drawText(birthplace, 92, 638);
+  }
+
+  drawText(`${address} ${zipcode} ${town}`, 134, 613);
 
   if (reasons.includes('travail')) {
     drawText('x', 76, 527, 19)
@@ -154,7 +146,7 @@ async function generatePdf (profile, reasons) {
 
   if (reasons !== '') {
     // Date sortie
-    drawText(`${profile.datesortie}`, 92, 200)
+    drawText(`${profile.date}`, 92, 200)
     drawText(releaseHours, 200, 201)
     drawText(releaseMinutes, 220, 201)
   }
@@ -186,157 +178,157 @@ async function generatePdf (profile, reasons) {
   const pdfBytes = await pdfDoc.save()
 
   return new Blob([pdfBytes], { type: 'application/pdf' })
-}
+};
 
-function downloadBlob (blob, fileName) {
-  const link = document.createElement('a')
-  const url = URL.createObjectURL(blob)
-  link.href = url
-  link.download = fileName
-  document.body.appendChild(link)
-  link.click()
-}
+// function downloadBlob (blob, fileName) {
+//   const link = document.createElement('a')
+//   const url = URL.createObjectURL(blob)
+//   link.href = url
+//   link.download = fileName
+//   document.body.appendChild(link)
+//   link.click()
+// }
 
-function getReasons () {
-  const values = $$('input[name="field-reason"]:checked')
-    .map((x) => x.value)
-    .join('-')
-  return values
-}
+// function getReasons () {
+//   const values = $$('input[name="field-reason"]:checked')
+//     .map((x) => x.value)
+//     .join('-')
+//   return values
+// }
 
-// see: https://stackoverflow.com/a/32348687/1513045
-function isFacebookBrowser () {
-  const ua = navigator.userAgent || navigator.vendor || window.opera
-  return ua.includes('FBAN') || ua.includes('FBAV')
-}
+// // see: https://stackoverflow.com/a/32348687/1513045
+// function isFacebookBrowser () {
+//   const ua = navigator.userAgent || navigator.vendor || window.opera
+//   return ua.includes('FBAN') || ua.includes('FBAV')
+// }
 
-if (isFacebookBrowser()) {
-  const alertFacebookElt = $('#alert-facebook')
-  alertFacebookElt.value =
-    "ATTENTION !! Vous utilisez actuellement le navigateur Facebook, ce générateur ne fonctionne pas correctement au sein de ce navigateur ! Merci d'ouvrir Chrome sur Android ou bien Safari sur iOS."
-  alertFacebookElt.classList.remove('d-none')
-}
+// if (isFacebookBrowser()) {
+//   const alertFacebookElt = $('#alert-facebook')
+//   alertFacebookElt.value =
+//     "ATTENTION !! Vous utilisez actuellement le navigateur Facebook, ce générateur ne fonctionne pas correctement au sein de ce navigateur ! Merci d'ouvrir Chrome sur Android ou bien Safari sur iOS."
+//   alertFacebookElt.classList.remove('d-none')
+// }
 
-function addSlash () {
-  const birthdayInput = $('#field-birthday')
-  birthdayInput.value = birthdayInput.value.replace(/^(\d{2})$/g, '$1/')
-    .replace(/^(\d{2})\/(\d{2})$/g, '$1/$2/')
-    .replace(/\/\//g, '/')
-}
+// function addSlash () {
+//   const birthdayInput = $('#field-birthday')
+//   birthdayInput.value = birthdayInput.value.replace(/^(\d{2})$/g, '$1/')
+//     .replace(/^(\d{2})\/(\d{2})$/g, '$1/$2/')
+//     .replace(/\/\//g, '/')
+// }
 
-$('#field-birthday').onkeyup = function () {
-  const key = event.keyCode || event.charCode
-  if (key === 8 || key === 46) {
-    return false
-  } else {
-    addSlash()
-    return false
-  }
-}
+// $('#field-birthday').onkeyup = function () {
+//   const key = event.keyCode || event.charCode
+//   if (key === 8 || key === 46) {
+//     return false
+//   } else {
+//     addSlash()
+//     return false
+//   }
+// }
 
-const snackbar = $('#snackbar')
+// const snackbar = $('#snackbar')
 
-$('#generate-btn').addEventListener('click', async (event) => {
-  event.preventDefault()
-  const invalid = validateAriaFields()
-  if (invalid) return
+// $('#generate-btn').addEventListener('click', async (event) => {
+//   event.preventDefault()
+//   const invalid = validateAriaFields()
+//   if (invalid) return
 
-  const reasons = getReasons()
-  const pdfBlob = await generatePdf(getProfile(), reasons)
+//   const reasons = getReasons()
+//   const pdfBlob = await generatePdf(getProfile(), reasons)
 
-  const creationInstant = new Date()
-  const creationDate = creationInstant.toLocaleDateString('fr-CA')
-  const creationHour = creationInstant
-    .toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-    .replace(':', '-')
-  downloadBlob(pdfBlob, `attestation-${creationDate}_${creationHour}.pdf`)
+//   const creationInstant = new Date()
+//   const creationDate = creationInstant.toLocaleDateString('fr-CA')
+//   const creationHour = creationInstant
+//     .toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+//     .replace(':', '-')
+//   downloadBlob(pdfBlob, `attestation-${creationDate}_${creationHour}.pdf`)
 
-  snackbar.classList.remove('d-none')
-  setTimeout(() => snackbar.classList.add('show'), 100)
+//   snackbar.classList.remove('d-none')
+//   setTimeout(() => snackbar.classList.add('show'), 100)
 
-  setTimeout(function () {
-    snackbar.classList.remove('show')
-    setTimeout(() => snackbar.classList.add('d-none'), 500)
-  }, 6000)
-})
+//   setTimeout(function () {
+//     snackbar.classList.remove('show')
+//     setTimeout(() => snackbar.classList.add('d-none'), 500)
+//   }, 6000)
+// })
 
-$$('input').forEach((input) => {
-  const exempleElt = input.parentNode.parentNode.querySelector('.exemple')
-  const validitySpan = input.parentNode.parentNode.querySelector('.validity')
-  if (input.placeholder && exempleElt) {
-    input.addEventListener('input', (event) => {
-      if (input.value) {
-        exempleElt.innerHTML = 'ex.&nbsp;: ' + input.placeholder
-        validitySpan.removeAttribute('hidden')
-      } else {
-        exempleElt.innerHTML = ''
-      }
-    })
-  }
-})
+// $$('input').forEach((input) => {
+//   const exempleElt = input.parentNode.parentNode.querySelector('.exemple')
+//   const validitySpan = input.parentNode.parentNode.querySelector('.validity')
+//   if (input.placeholder && exempleElt) {
+//     input.addEventListener('input', (event) => {
+//       if (input.value) {
+//         exempleElt.innerHTML = 'ex.&nbsp;: ' + input.placeholder
+//         validitySpan.removeAttribute('hidden')
+//       } else {
+//         exempleElt.innerHTML = ''
+//       }
+//     })
+//   }
+// })
 
-const conditions = {
-  '#field-firstname': {
-    condition: 'length',
-  },
-  '#field-lastname': {
-    condition: 'length',
-  },
-  '#field-birthday': {
-    condition: 'pattern',
-    pattern: /^([0][1-9]|[1-2][0-9]|30|31)\/([0][1-9]|10|11|12)\/(19[0-9][0-9]|20[0-1][0-9]|2020)/g,
-  },
-  '#field-lieunaissance': {
-    condition: 'length',
-  },
-  '#field-address': {
-    condition: 'length',
-  },
-  '#field-town': {
-    condition: 'length',
-  },
-  '#field-zipcode': {
-    condition: 'pattern',
-    pattern: /\d{5}/g,
-  },
-  '#field-datesortie': {
-    condition: 'pattern',
-    pattern: /\d{4}-\d{2}-\d{2}/g,
-  },
-  '#field-heuresortie': {
-    condition: 'pattern',
-    pattern: /\d{2}:\d{2}/g,
-  },
-}
+// const conditions = {
+//   '#field-firstname': {
+//     condition: 'length',
+//   },
+//   '#field-lastname': {
+//     condition: 'length',
+//   },
+//   '#field-birthday': {
+//     condition: 'pattern',
+//     pattern: /^([0][1-9]|[1-2][0-9]|30|31)\/([0][1-9]|10|11|12)\/(19[0-9][0-9]|20[0-1][0-9]|2020)/g,
+//   },
+//   '#field-lieunaissance': {
+//     condition: 'length',
+//   },
+//   '#field-address': {
+//     condition: 'length',
+//   },
+//   '#field-town': {
+//     condition: 'length',
+//   },
+//   '#field-zipcode': {
+//     condition: 'pattern',
+//     pattern: /\d{5}/g,
+//   },
+//   '#field-datesortie': {
+//     condition: 'pattern',
+//     pattern: /\d{4}-\d{2}-\d{2}/g,
+//   },
+//   '#field-heuresortie': {
+//     condition: 'pattern',
+//     pattern: /\d{2}:\d{2}/g,
+//   },
+// }
 
-function validateAriaFields () {
-  return Object.keys(conditions).map(field => {
-    if (conditions[field].condition === 'pattern') {
-      const pattern = conditions[field].pattern
-      if ($(field).value.match(pattern)) {
-        $(field).setAttribute('aria-invalid', 'false')
-        return 0
-      } else {
-        $(field).setAttribute('aria-invalid', 'true')
-        $(field).focus()
-        return 1
-      }
-    }
-    if (conditions[field].condition === 'length') {
-      if ($(field).value.length > 0) {
-        $(field).setAttribute('aria-invalid', 'false')
-        return 0
-      } else {
-        $(field).setAttribute('aria-invalid', 'true')
-        $(field).focus()
-        return 1
-      }
-    }
-  }).some(x => x === 1)
-}
+// function validateAriaFields () {
+//   return Object.keys(conditions).map(field => {
+//     if (conditions[field].condition === 'pattern') {
+//       const pattern = conditions[field].pattern
+//       if ($(field).value.match(pattern)) {
+//         $(field).setAttribute('aria-invalid', 'false')
+//         return 0
+//       } else {
+//         $(field).setAttribute('aria-invalid', 'true')
+//         $(field).focus()
+//         return 1
+//       }
+//     }
+//     if (conditions[field].condition === 'length') {
+//       if ($(field).value.length > 0) {
+//         $(field).setAttribute('aria-invalid', 'false')
+//         return 0
+//       } else {
+//         $(field).setAttribute('aria-invalid', 'true')
+//         $(field).focus()
+//         return 1
+//       }
+//     }
+//   }).some(x => x === 1)
+// }
 
-(function addVersion () {
-  document.getElementById(
-    'version',
-  ).innerHTML = `${new Date().getFullYear()} - ${process.env.VERSION}`
-}())
+export {
+  pad,
+  getCachedState,
+  getFormattedDate,
+};

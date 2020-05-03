@@ -1,16 +1,19 @@
 import React, { useCallback, ChangeEvent } from 'react';
 
 import { Reason } from 'types';
+import useCachedState from 'hooks/useCachedState';
 
-interface IProps {
-  readonly reasons: Reason[];
-  readonly setActiveReasons: (value: Reason) => void;
-}
+const Reasons = (): JSX.Element => {
+  const [cachedState, setCachedState] = useCachedState();
+  const { reasons = [] } = cachedState;
 
-const Reasons = ({ reasons, setActiveReasons }: IProps): JSX.Element => {
-  const updateActiveReasons = useCallback(({ currentTarget: { value } }: ChangeEvent<HTMLInputElement>): void => {
-    return setActiveReasons(value as Reason);
-  }, [setActiveReasons]);
+  const setActiveReasons = useCallback(({ currentTarget }: ChangeEvent<HTMLInputElement>): void => {
+    const value = currentTarget.value as Reason;
+
+    return reasons.includes(value)
+      ? setCachedState({ reasons: reasons.filter(r => r !== value) })
+      : setCachedState({ reasons: reasons.concat(value) });
+  }, [reasons, setCachedState]);
 
   return (
     <fieldset>
@@ -23,7 +26,7 @@ const Reasons = ({ reasons, setActiveReasons }: IProps): JSX.Element => {
           name="field-reason"
           id="checkbox-travail"
           value="travail"
-          onChange={updateActiveReasons}
+          onChange={setActiveReasons}
           checked={reasons.includes('travail')}
         />
         <label className="form-check-label" htmlFor="checkbox-travail">
@@ -38,7 +41,7 @@ const Reasons = ({ reasons, setActiveReasons }: IProps): JSX.Element => {
           name="field-reason"
           id="checkbox-courses"
           value="courses"
-          onChange={updateActiveReasons}
+          onChange={setActiveReasons}
           checked={reasons.includes('courses')}
         />
         <label className="form-check-label" htmlFor="checkbox-courses">
@@ -53,7 +56,7 @@ const Reasons = ({ reasons, setActiveReasons }: IProps): JSX.Element => {
           name="field-reason"
           id="checkbox-sante"
           value="sante"
-          onChange={updateActiveReasons}
+          onChange={setActiveReasons}
           checked={reasons.includes('sante')}
         />
         <label className="form-check-label" htmlFor="checkbox-sante">
@@ -68,7 +71,7 @@ const Reasons = ({ reasons, setActiveReasons }: IProps): JSX.Element => {
           name="field-reason"
           id="checkbox-famille"
           value="famille"
-          onChange={updateActiveReasons}
+          onChange={setActiveReasons}
           checked={reasons.includes('famille')}
         />
         <label className="form-check-label" htmlFor="checkbox-famille">
@@ -83,7 +86,7 @@ const Reasons = ({ reasons, setActiveReasons }: IProps): JSX.Element => {
           name="field-reason"
           id="checkbox-sport"
           value="sport"
-          onChange={updateActiveReasons}
+          onChange={setActiveReasons}
           checked={reasons.includes('sport')}
         />
         <label className="form-check-label" htmlFor="checkbox-sport">
@@ -97,7 +100,7 @@ const Reasons = ({ reasons, setActiveReasons }: IProps): JSX.Element => {
           name="field-reason"
           id="checkbox-judiciaire"
           value="judiciaire"
-          onChange={updateActiveReasons}
+          onChange={setActiveReasons}
           checked={reasons.includes('judiciaire')}
         />
         <label className="form-check-label" htmlFor="checkbox-judiciaire">
@@ -111,7 +114,7 @@ const Reasons = ({ reasons, setActiveReasons }: IProps): JSX.Element => {
           name="field-reason"
           id="checkbox-missions"
           value="missions"
-          onChange={updateActiveReasons}
+          onChange={setActiveReasons}
           checked={reasons.includes('missions')}
         />
         <label className="form-check-label" htmlFor="checkbox-missions">
