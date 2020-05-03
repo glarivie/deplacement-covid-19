@@ -26,12 +26,6 @@ module.exports = {
       options: JSON.parse(manifest),
     },
     {
-      resolve: 'gatsby-plugin-robots-txt',
-      options: {
-        policy: [{ userAgent: '*', disallow: '*' }],
-      },
-    },
-    {
       resolve: 'gatsby-plugin-alias-imports',
       options: {
         alias: {
