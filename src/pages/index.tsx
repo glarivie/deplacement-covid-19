@@ -1,4 +1,6 @@
-import React, { Fragment } from 'react';
+import React, { Fragment, useCallback } from 'react';
+import { useList, useLocalStorage } from 'react-use';
+import { uniq } from 'lodash';
 
 import Header from 'components/Header';
 import FormGroup from 'components/FormGroup';
@@ -6,11 +8,18 @@ import Reasons from 'components/Reasons';
 import Credits from 'components/Credits';
 import Footer from 'components/Footer';
 
+import { Reason } from 'types';
+
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'styles/shared/main.scss';
 
 const Homepage = () => {
+  const [reasons, { push, filter }] = useList<Reason>([]);
+
+  const setActiveReasons = useCallback((value: Reason): void => {
+    return reasons.includes(value) ? filter(r => r !== value) : push(value);
+  }, [reasons, push, filter]);
 
   return (
     <Fragment>
@@ -83,7 +92,10 @@ const Homepage = () => {
               placeholder="75001"
             />
 
-            <Reasons />
+            <Reasons
+              reasons={reasons}
+              setActiveReasons={setActiveReasons}
+            />
 
             <FormGroup
               label="Date de sortie"
