@@ -21,8 +21,6 @@ module.exports = {
         path: resolve(__dirname, 'src', 'assets'),
       },
     },
-    'gatsby-transformer-sharp',
-    'gatsby-plugin-sharp',
     {
       resolve: 'gatsby-plugin-manifest',
       options: JSON.parse(manifest),
