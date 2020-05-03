@@ -1,34 +1,53 @@
+const { resolve } = require('path');
+const { readFileSync } = require('fs');
+
+const manifest = readFileSync(resolve(__dirname, 'src/assets/favicons/site.webmanifest'), 'utf8');
+
 module.exports = {
   siteMetadata: {
-    title: `Gatsby Default Starter`,
-    description: `Kick off your next, great Gatsby project with this default starter. This barebones starter ships with the main Gatsby configuration files you might need.`,
-    author: `@gatsbyjs`,
+    title: 'deplacement-covid-19',
+    description: 'Service de génération de l\'attestation de déplacement dérogatoire à présenter dans le cadre du confinement lié au virus covid-19',
+    author: 'Guillaume L. <g.lariviere@student.42.fr>',
   },
   plugins: [
-    `gatsby-plugin-react-helmet`,
+    'gatsby-plugin-react-helmet',
+    'gatsby-plugin-typescript',
+    'gatsby-plugin-sass',
+    'gatsby-plugin-eslint',
     {
-      resolve: `gatsby-source-filesystem`,
+      resolve: 'gatsby-source-filesystem',
       options: {
-        name: `images`,
-        path: `${__dirname}/src/images`,
+        name: 'assets',
+        path: resolve(__dirname, 'src', 'assets'),
       },
     },
-    `gatsby-transformer-sharp`,
-    `gatsby-plugin-sharp`,
+    'gatsby-transformer-sharp',
+    'gatsby-plugin-sharp',
     {
-      resolve: `gatsby-plugin-manifest`,
+      resolve: 'gatsby-plugin-manifest',
+      options: JSON.parse(manifest),
+    },
+    {
+      resolve: 'gatsby-plugin-robots-txt',
       options: {
-        name: `gatsby-starter-default`,
-        short_name: `starter`,
-        start_url: `/`,
-        background_color: `#663399`,
-        theme_color: `#663399`,
-        display: `minimal-ui`,
-        icon: `src/images/gatsby-icon.png`, // This path is relative to the root of the site.
+        policy: [{ userAgent: '*', disallow: '*' }],
+      },
+    },
+    {
+      resolve: 'gatsby-plugin-alias-imports',
+      options: {
+        alias: {
+          assets: resolve(__dirname, 'src', 'assets'),
+          pages: resolve(__dirname, 'src', 'pages'),
+          components: resolve(__dirname, 'src', 'components'),
+          helpers: resolve(__dirname, 'src', 'helpers'),
+          styles: resolve(__dirname, 'src', 'styles'),
+        },
+        extensions: ['ts', 'tsx', 'js', 'jsx'],
       },
     },
     // this (optional) plugin enables Progressive Web App + Offline functionality
     // To learn more, visit: https://gatsby.dev/offline
-    // `gatsby-plugin-offline`,
+    // 'gatsby-plugin-offline',
   ],
 }
