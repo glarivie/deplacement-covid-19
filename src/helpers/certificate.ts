@@ -39,8 +39,9 @@ const formatReasons = (reasons: Reason[]): string => {
 
 const formatProfile = (profile: FormState): FormState => {
   const date = profile?.date?.split('-').reverse().join('/');
+  const birthday = profile?.birthday?.split('-').reverse().join('/');
 
-  return { ...profile, date };
+  return { ...profile, birthday, date };
 }
 
 const idealFontSize = (font: PDFFont, text: string, maxWidth: number, minSize: number, defaultSize: number) => {
