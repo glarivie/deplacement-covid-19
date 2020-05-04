@@ -61,6 +61,7 @@ const Homepage = () => {
 
             <FormGroup
               label="Date de naissance (au format jj/mm/aaaa)"
+              type="date"
               pattern="^([0][1-9]|[1-2][0-9]|30|31)\/([0][1-9]|10|11|12)\/(19[0-9][0-9]|20[0-1][0-9]|2020)"
               inputMode="numeric"
               name="birthday"
