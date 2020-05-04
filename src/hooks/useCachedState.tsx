@@ -1,22 +1,29 @@
-import { useEffect } from 'react';
-import { useLocalStorage, useSetState } from 'react-use';
-import { isEqual } from 'lodash';
+import { useEffect, useCallback } from 'react';
+import { useLocalStorage, createGlobalState } from 'react-use';
+import { isEqual, isNil } from 'lodash';
 
 import { FormState } from 'types';
 
 type CachedState = [FormState, (patch: Partial<FormState>) => void];
 
+const cached = localStorage.getItem('cached');
+const useGlobalState = createGlobalState<FormState>(isNil(cached) ? {} : JSON.parse(cached));
+
 const useCachedState = (): CachedState => {
   const [cachedState, setCachedState] = useLocalStorage<FormState>('cached', {});
-  const [state, setState] = useSetState<FormState>(cachedState);
+  const [globalState = {}, setGlobalState] = useGlobalState();
+
+  const setPartialState = useCallback((patch: Partial<FormState>): void => {
+    return setGlobalState({ ...globalState, ...patch });
+  }, [globalState, setGlobalState]);
 
   useEffect(() => {
-    if (!isEqual(state, cachedState)) {
-      return setCachedState(state);
+    if (!isEqual(globalState, cachedState)) {
+      return setCachedState(globalState);
     }
-  }, [state, cachedState, setCachedState]);
+  }, [globalState, cachedState, setGlobalState, setCachedState]);
 
-  return [state, setState];
+  return [globalState, setPartialState];
 };
 
 export default useCachedState;

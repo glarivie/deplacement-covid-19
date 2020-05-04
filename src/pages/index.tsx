@@ -1,4 +1,4 @@
-import React, { Fragment } from 'react';
+import React, { Fragment, useCallback, FormEvent } from 'react';
 import { useMount } from 'react-use';
 
 import Header from 'components/Header';
@@ -8,14 +8,14 @@ import Credits from 'components/Credits';
 import Footer from 'components/Footer';
 
 import useCachedState from 'hooks/useCachedState';
-import { pad, getFormattedDate } from 'helpers/certificate';
+import { pad, getFormattedDate, generate } from 'helpers/certificate';
 
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'styles/shared/main.scss';
 
 const Homepage = () => {
-  const [, setCachedState] = useCachedState();
+  const [cachedState, setCachedState] = useCachedState();
 
   useMount(() => {
     const loadedDate = new Date();
@@ -28,13 +28,18 @@ const Homepage = () => {
     });
   });
 
+  const getCertificate = useCallback(async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    return generate(cachedState);
+  }, [cachedState, generate]);
+
   return (
     <Fragment>
       <Header />
       <main role="main">
         <p className="alert  alert-danger  d-none" role="alert" id="alert-facebook"></p>
         <div className="wrapper">
-          <form id="form-profile" acceptCharset="UTF-8">
+          <form id="form-profile" acceptCharset="UTF-8" onSubmit={getCertificate}>
             <h2 className="titre-2">Remplissez en ligne votre attestation numérique :</h2>
             <p className="text-alert">Tous les champs sont obligatoires.</p>
 
@@ -51,7 +56,6 @@ const Homepage = () => {
               name="lastname"
               autoComplete="family-name"
               placeholder="Dupont"
-              aria-invalid="false"
               autoFocus
             />
 
@@ -116,9 +120,8 @@ const Homepage = () => {
               autoComplete="off"
             />
 
-
             <p className="text-center mt-5">
-              <button type="button" id="generate-btn" className="btn btn-primary btn-attestation">
+              <button type="submit" id="generate-btn" className="btn btn-primary btn-attestation">
                 <span>
                   <i className="fa fa-file-pdf inline-block mr-1"></i>  Générer mon attestation
                 </span>

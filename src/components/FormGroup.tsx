@@ -20,6 +20,8 @@ const FormGroup = (props: IProps) => {
   const setInputValue = useCallback(({ currentTarget }: ChangeEvent<HTMLInputElement>) => {
     const value = get(currentTarget, 'value', '');
 
+    console.log('setInputValue', { [name]: value });
+
     return setCachedState({ [name]: value });
   }, [setCachedState, name]);
 
@@ -36,9 +38,9 @@ const FormGroup = (props: IProps) => {
           onChange={setInputValue}
           required
         />
-        {/* <span className="validity" aria-hidden="true" hidden></span> */}
+        <span className="validity" aria-hidden="true" hidden={false} />
       </div>
-      {/* <p className="exemple"></p> */}
+      <p className="exemple"></p>
     </div>
   );
 };

@@ -1,15 +1,9 @@
 import { PDFDocument, StandardFonts, PDFFont } from 'pdf-lib';
 import QRCode, { QRCodeToDataURLOptions } from 'qrcode';
-import { isNil } from 'lodash';
+import { isEmpty } from 'lodash';
 
 import { FormState, Reason } from 'types';
 import pdfBase from 'assets/certificate.pdf';
-
-const getCachedState = (): FormState => {
-  const data = localStorage.getItem('cached');
-
-  return isNil(data) ? {} : JSON.parse(data);
-};
 
 const generateQR = async (text: string): Promise<string | void> => {
   try {
@@ -39,11 +33,14 @@ const getFormattedDate = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const getProfile = (): FormState => {
-  const fields = getCachedState();
-  const date = fields?.date?.split('-').reverse().join('/');
+const formatReasons = (reasons: Reason[]): string => {
+  return reasons.join('-');
+};
 
-  return { ...fields, date };
+const formatProfile = (profile: FormState): FormState => {
+  const date = profile?.date?.split('-').reverse().join('/');
+
+  return { ...profile, date };
 }
 
 const idealFontSize = (font: PDFFont, text: string, maxWidth: number, minSize: number, defaultSize: number) => {
@@ -85,11 +82,10 @@ const generatePdf = async (profile: FormState, reasons: Reason[]) => {
     `Naissance: ${birthday} a ${birthplace}`,
     `Adresse: ${address} ${zipcode} ${town}`,
     `Sortie: ${date} a ${releaseHours}h${releaseMinutes}`,
-    `Motifs: ${reasons}`,
+    `Motifs: ${formatReasons(reasons)}`,
   ].join('; ');
 
   const existingPdfBytes = await fetch(pdfBase).then((res) => res.arrayBuffer());
-
   const pdfDoc = await PDFDocument.load(existingPdfBytes);
   const page1 = pdfDoc.getPages()[0];
 
@@ -112,145 +108,107 @@ const generatePdf = async (profile: FormState, reasons: Reason[]) => {
   drawText(`${address} ${zipcode} ${town}`, 134, 613);
 
   if (reasons.includes('travail')) {
-    drawText('x', 76, 527, 19)
+    drawText('x', 76, 527, 19);
   }
   if (reasons.includes('courses')) {
-    drawText('x', 76, 478, 19)
+    drawText('x', 76, 478, 19);
   }
   if (reasons.includes('sante')) {
-    drawText('x', 76, 436, 19)
+    drawText('x', 76, 436, 19);
   }
   if (reasons.includes('famille')) {
-    drawText('x', 76, 400, 19)
+    drawText('x', 76, 400, 19);
   }
   if (reasons.includes('sport')) {
-    drawText('x', 76, 345, 19)
+    drawText('x', 76, 345, 19);
   }
   if (reasons.includes('judiciaire')) {
-    drawText('x', 76, 298, 19)
+    drawText('x', 76, 298, 19);
   }
   if (reasons.includes('missions')) {
-    drawText('x', 76, 260, 19)
-  }
-  let locationSize = idealFontSize(font, profile.town, 83, 7, 11)
-
-  if (!locationSize) {
-    alert(
-      'Le nom de la ville risque de ne pas être affiché correctement en raison de sa longueur. ' +
-        'Essayez d\'utiliser des abréviations ("Saint" en "St." par exemple) quand cela est possible.',
-    )
-    locationSize = 7
+    drawText('x', 76, 260, 19);
   }
 
-  drawText(profile.town, 111, 226, locationSize)
+  if (town) {
+    let locationSize = idealFontSize(font, town, 83, 7, 11);
 
-  if (reasons !== '') {
+    if (!locationSize) {
+      alert(
+        'Le nom de la ville risque de ne pas être affiché correctement en raison de sa longueur. ' +
+          'Essayez d\'utiliser des abréviations ("Saint" en "St." par exemple) quand cela est possible.',
+      );
+      locationSize = 7;
+    }
+
+    drawText(town, 111, 226, locationSize);
+  }
+
+  if (!isEmpty(reasons)) {
     // Date sortie
-    drawText(`${profile.date}`, 92, 200)
-    drawText(releaseHours, 200, 201)
-    drawText(releaseMinutes, 220, 201)
+    drawText(`${date}`, 92, 200);
+    drawText(releaseHours, 200, 201);
+    drawText(releaseMinutes, 220, 201);
   }
 
   // Date création
-  drawText('Date de création:', 464, 150, 7)
-  drawText(`${creationDate} à ${creationHour}`, 455, 144, 7)
+  drawText('Date de création:', 464, 150, 7);
+  drawText(`${creationDate} à ${creationHour}`, 455, 144, 7);
 
   const generatedQR = await generateQR(data)
 
-  const qrImage = await pdfDoc.embedPng(generatedQR)
+  if (generatedQR) {
+    const qrImage = await pdfDoc.embedPng(generatedQR);
 
-  page1.drawImage(qrImage, {
-    x: page1.getWidth() - 170,
-    y: 155,
-    width: 100,
-    height: 100,
-  })
+    page1.drawImage(qrImage, {
+      x: page1.getWidth() - 170,
+      y: 155,
+      width: 100,
+      height: 100,
+    });
 
-  pdfDoc.addPage()
-  const page2 = pdfDoc.getPages()[1]
-  page2.drawImage(qrImage, {
-    x: 50,
-    y: page2.getHeight() - 350,
-    width: 300,
-    height: 300,
-  })
+    pdfDoc.addPage();
 
-  const pdfBytes = await pdfDoc.save()
+    const page2 = pdfDoc.getPages()[1];
 
-  return new Blob([pdfBytes], { type: 'application/pdf' })
+    page2.drawImage(qrImage, {
+      x: 50,
+      y: page2.getHeight() - 350,
+      width: 300,
+      height: 300,
+    });
+  }
+
+  const pdfBytes = await pdfDoc.save();
+
+  return new Blob([pdfBytes], { type: 'application/pdf' });
 };
 
-// function downloadBlob (blob, fileName) {
-//   const link = document.createElement('a')
-//   const url = URL.createObjectURL(blob)
-//   link.href = url
-//   link.download = fileName
-//   document.body.appendChild(link)
-//   link.click()
-// }
+const downloadBlob = (blob: Blob, fileName: string): void => {
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+};
 
-// function getReasons () {
-//   const values = $$('input[name="field-reason"]:checked')
-//     .map((x) => x.value)
-//     .join('-')
-//   return values
-// }
+const generate = async ({ reasons, ...profile }: FormState): Promise<void> => {
+  // const invalid = validateAriaFields()
+  // if (invalid) return
 
-// // see: https://stackoverflow.com/a/32348687/1513045
-// function isFacebookBrowser () {
-//   const ua = navigator.userAgent || navigator.vendor || window.opera
-//   return ua.includes('FBAN') || ua.includes('FBAV')
-// }
+  if (!reasons)
+    throw new Error('Reasons array is empty or undefined');
 
-// if (isFacebookBrowser()) {
-//   const alertFacebookElt = $('#alert-facebook')
-//   alertFacebookElt.value =
-//     "ATTENTION !! Vous utilisez actuellement le navigateur Facebook, ce générateur ne fonctionne pas correctement au sein de ce navigateur ! Merci d'ouvrir Chrome sur Android ou bien Safari sur iOS."
-//   alertFacebookElt.classList.remove('d-none')
-// }
+  const pdfBlob = await generatePdf(formatProfile(profile), reasons);
 
-// function addSlash () {
-//   const birthdayInput = $('#field-birthday')
-//   birthdayInput.value = birthdayInput.value.replace(/^(\d{2})$/g, '$1/')
-//     .replace(/^(\d{2})\/(\d{2})$/g, '$1/$2/')
-//     .replace(/\/\//g, '/')
-// }
+  const creationInstant = new Date();
+  const creationDate = creationInstant.toLocaleDateString('fr-FR');
+  const creationHour = creationInstant
+    .toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    .replace(':', '-');
 
-// $('#field-birthday').onkeyup = function () {
-//   const key = event.keyCode || event.charCode
-//   if (key === 8 || key === 46) {
-//     return false
-//   } else {
-//     addSlash()
-//     return false
-//   }
-// }
-
-// const snackbar = $('#snackbar')
-
-// $('#generate-btn').addEventListener('click', async (event) => {
-//   event.preventDefault()
-//   const invalid = validateAriaFields()
-//   if (invalid) return
-
-//   const reasons = getReasons()
-//   const pdfBlob = await generatePdf(getProfile(), reasons)
-
-//   const creationInstant = new Date()
-//   const creationDate = creationInstant.toLocaleDateString('fr-CA')
-//   const creationHour = creationInstant
-//     .toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-//     .replace(':', '-')
-//   downloadBlob(pdfBlob, `attestation-${creationDate}_${creationHour}.pdf`)
-
-//   snackbar.classList.remove('d-none')
-//   setTimeout(() => snackbar.classList.add('show'), 100)
-
-//   setTimeout(function () {
-//     snackbar.classList.remove('show')
-//     setTimeout(() => snackbar.classList.add('d-none'), 500)
-//   }, 6000)
-// })
+  return downloadBlob(pdfBlob, `attestation-${creationDate}_${creationHour}.pdf`);
+};
 
 // $$('input').forEach((input) => {
 //   const exempleElt = input.parentNode.parentNode.querySelector('.exemple')
@@ -329,6 +287,7 @@ const generatePdf = async (profile: FormState, reasons: Reason[]) => {
 
 export {
   pad,
-  getCachedState,
+  generate,
+  generatePdf,
   getFormattedDate,
 };
