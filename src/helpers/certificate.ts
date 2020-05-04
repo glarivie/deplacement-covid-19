@@ -186,17 +186,17 @@ const generatePdf = async (profile: FormState, reasons: Reason[]) => {
 
 const downloadBlob = (blob: Blob, fileName: string): void => {
   const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-  link.href = url;
-  link.download = fileName;
+
+  link.setAttribute('href', URL.createObjectURL(blob));
+  link.setAttribute('target', '_blank');
+  link.setAttribute('rel', 'noopener noreferrer');
+  link.setAttribute('download', fileName);
+
   document.body.appendChild(link);
   link.click();
 };
 
 const generate = async ({ reasons, ...profile }: FormState): Promise<void> => {
-  // const invalid = validateAriaFields()
-  // if (invalid) return
-
   if (!reasons)
     throw new Error('Reasons array is empty or undefined');
 
@@ -210,81 +210,6 @@ const generate = async ({ reasons, ...profile }: FormState): Promise<void> => {
 
   return downloadBlob(pdfBlob, `attestation-${creationDate}_${creationHour}.pdf`);
 };
-
-// $$('input').forEach((input) => {
-//   const exempleElt = input.parentNode.parentNode.querySelector('.exemple')
-//   const validitySpan = input.parentNode.parentNode.querySelector('.validity')
-//   if (input.placeholder && exempleElt) {
-//     input.addEventListener('input', (event) => {
-//       if (input.value) {
-//         exempleElt.innerHTML = 'ex.&nbsp;: ' + input.placeholder
-//         validitySpan.removeAttribute('hidden')
-//       } else {
-//         exempleElt.innerHTML = ''
-//       }
-//     })
-//   }
-// })
-
-// const conditions = {
-//   '#field-firstname': {
-//     condition: 'length',
-//   },
-//   '#field-lastname': {
-//     condition: 'length',
-//   },
-//   '#field-birthday': {
-//     condition: 'pattern',
-//     pattern: /^([0][1-9]|[1-2][0-9]|30|31)\/([0][1-9]|10|11|12)\/(19[0-9][0-9]|20[0-1][0-9]|2020)/g,
-//   },
-//   '#field-lieunaissance': {
-//     condition: 'length',
-//   },
-//   '#field-address': {
-//     condition: 'length',
-//   },
-//   '#field-town': {
-//     condition: 'length',
-//   },
-//   '#field-zipcode': {
-//     condition: 'pattern',
-//     pattern: /\d{5}/g,
-//   },
-//   '#field-datesortie': {
-//     condition: 'pattern',
-//     pattern: /\d{4}-\d{2}-\d{2}/g,
-//   },
-//   '#field-heuresortie': {
-//     condition: 'pattern',
-//     pattern: /\d{2}:\d{2}/g,
-//   },
-// }
-
-// function validateAriaFields () {
-//   return Object.keys(conditions).map(field => {
-//     if (conditions[field].condition === 'pattern') {
-//       const pattern = conditions[field].pattern
-//       if ($(field).value.match(pattern)) {
-//         $(field).setAttribute('aria-invalid', 'false')
-//         return 0
-//       } else {
-//         $(field).setAttribute('aria-invalid', 'true')
-//         $(field).focus()
-//         return 1
-//       }
-//     }
-//     if (conditions[field].condition === 'length') {
-//       if ($(field).value.length > 0) {
-//         $(field).setAttribute('aria-invalid', 'false')
-//         return 0
-//       } else {
-//         $(field).setAttribute('aria-invalid', 'true')
-//         $(field).focus()
-//         return 1
-//       }
-//     }
-//   }).some(x => x === 1)
-// }
 
 export {
   pad,
