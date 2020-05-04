@@ -6,7 +6,7 @@ import { FormState } from 'types';
 
 type CachedState = [FormState, (patch: Partial<FormState>) => void];
 
-const cached = localStorage.getItem('cached');
+const cached = typeof window !== 'undefined' ? localStorage.getItem('cached') : null;
 const useGlobalState = createGlobalState<FormState>(isNil(cached) ? {} : JSON.parse(cached));
 
 const useCachedState = (): CachedState => {
